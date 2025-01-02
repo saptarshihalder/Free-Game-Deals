@@ -34,14 +34,24 @@ def create_embed(title, link):
         "embeds": [{
             "title": title,
             "url": link,
-            "color": 3447003,  # Discord blue
+            "color": 3447003,
             "author": {
                 "name": "Free Game Alert",
-                "icon_url": "https://cdn.discordapp.com/emojis/1039663378205925466.webp"  # Game controller emoji
+                "icon_url": "https://cdn.discordapp.com/emojis/1039663378205925466.webp"
             },
+            "description": f"[Click to Claim →]({link})",
             "footer": {
                 "text": "Limited Time Offer"
             }
+        }],
+        "components": [{
+            "type": 1,
+            "components": [{
+                "type": 2,
+                "style": 5,
+                "label": "Claim Now",
+                "url": link
+            }]
         }]
     }
     
