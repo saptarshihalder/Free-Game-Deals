@@ -1,0 +1,62 @@
+name: Post Game Deals to Discord
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Runs every hour
+  workflow_dispatch:
+
+jobs:
+  post_deals:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install feedparser requests
+
+      - name: Fetch and Post Game Deals
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          import feedparser
+          import requests
+
+          # RSS Feeds
+          feeds = [
+              "https://github.com/eikowagenknecht/lootscraper/feed",  # LootScraper
+              "https://www.reddit.com/r/GameDealsFree/.rss"           # Reddit GameDealsFree
+          ]
+
+          # Track posted links to avoid duplicates
+          posted_links = set()
+
+          for feed_url in feeds:
+              feed = feedparser.parse(feed_url)
+
+              for entry in feed.entries:
+                  title = entry.title
+                  link = entry.link
+
+                  # Avoid duplicates
+                  if link in posted_links:
+                      continue
+
+                  # Format message (hide source details)
+                  message = f"🎮 **{title}**\n{link}"
+                  posted_links.add(link)
+
+                  # Post to Discord
+                  response = requests.post(
+                      WEBHOOK_URL,
+                      json={"content": message}
+                  )
+
+                  if response.status_code == 204:
+                      print(f"Posted: {title}")
+                  else:
+                      print(f"Failed to post: {title}, Status: {response.status_code}")
