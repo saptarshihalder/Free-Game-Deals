@@ -13,11 +13,25 @@ feeds = [
 posted_links = set()
 
 def clean_title(title):
-    # Remove source indicators like [Steam], (GOG), etc.
+    # Remove source indicators and platform tags
     title = re.sub(r'\[(.*?)\]|\((.*?)\)', '', title)
-    # Remove extra whitespace
+    # Remove "Free" mentions as we'll add our own
+    title = re.sub(r'\bfree\b', '', title, flags=re.IGNORECASE)
+    # Clean up extra whitespace
     title = ' '.join(title.split())
     return title
+
+def create_embed(title, link):
+    return {
+        "embeds": [{
+            "title": "🎮 New Free Game Available!",
+            "description": f"**{title}**\n\n[**Claim Now →**]({link})",
+            "color": 5793266,  # Green color
+            "footer": {
+                "text": "Limited time offer • Claim while available"
+            }
+        }]
+    }
 
 for feed_url in feeds:
     feed = feedparser.parse(feed_url)
@@ -28,15 +42,14 @@ for feed_url in feeds:
         if link in posted_links:
             continue
             
-        message = f"🎮 **FREE GAME**: {title}\n{link}"
-        posted_links.add(link)
-        
         response = requests.post(
             WEBHOOK_URL,
-            json={"content": message}
+            json=create_embed(title, link)
         )
         
         if response.status_code == 204:
             print(f"Posted: {title}")
         else:
             print(f"Failed to post: {title}, Status: {response.status_code}")
+        
+        posted_links.add(link)
