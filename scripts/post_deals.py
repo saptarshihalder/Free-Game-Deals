@@ -2,6 +2,7 @@ import feedparser
 import requests
 import os
 import re
+from urllib.parse import quote
 
 WEBHOOK_URL = os.getenv('WEBHOOK_URL')
 
@@ -13,25 +14,42 @@ feeds = [
 posted_links = set()
 
 def clean_title(title):
-    # Remove source indicators and platform tags
     title = re.sub(r'\[(.*?)\]|\((.*?)\)', '', title)
-    # Remove "Free" mentions as we'll add our own
     title = re.sub(r'\bfree\b', '', title, flags=re.IGNORECASE)
-    # Clean up extra whitespace
-    title = ' '.join(title.split())
-    return title
+    return ' '.join(title.split())
+
+def get_steam_image(game_name):
+    try:
+        search_url = f"https://store.steampowered.com/api/storesearch/?term={quote(game_name)}&l=en"
+        response = requests.get(search_url)
+        data = response.json()
+        if data.get('total') > 0:
+            return f"https://cdn.cloudflare.steamstatic.com/steam/apps/{data['items'][0]['id']}/header.jpg"
+    except:
+        pass
+    return None
 
 def create_embed(title, link):
-    return {
+    embed = {
         "embeds": [{
-            "title": "🎮 New Free Game Available!",
-            "description": f"**{title}**\n\n[**Claim Now →**]({link})",
-            "color": 5793266,  # Green color
+            "title": title,
+            "url": link,
+            "color": 3447003,  # Discord blue
+            "author": {
+                "name": "Free Game Alert",
+                "icon_url": "https://cdn.discordapp.com/emojis/1039663378205925466.webp"  # Game controller emoji
+            },
             "footer": {
-                "text": "Limited time offer • Claim while available"
+                "text": "Limited Time Offer"
             }
         }]
     }
+    
+    image_url = get_steam_image(title)
+    if image_url:
+        embed["embeds"][0]["image"] = {"url": image_url}
+    
+    return embed
 
 for feed_url in feeds:
     feed = feedparser.parse(feed_url)
@@ -41,7 +59,7 @@ for feed_url in feeds:
         
         if link in posted_links:
             continue
-            
+        
         response = requests.post(
             WEBHOOK_URL,
             json=create_embed(title, link)
